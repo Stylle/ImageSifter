@@ -1,0 +1,48 @@
+name: Windows build and regression
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          arch: win64_mingw
+          modules: qtimageformats
+          tools: 'tools_mingw1310,qt.tools.win64_mingw1310'
+          cache: true
+      - name: Configure and build
+        shell: pwsh
+        run: |
+          $qtBase=Split-Path (Split-Path $env:QT_ROOT_DIR -Parent) -Parent
+          $env:Path="$(Join-Path $qtBase 'Tools/mingw1310_64/bin');$env:Path"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          if($LASTEXITCODE){exit $LASTEXITCODE}
+          cmake --build build --parallel 4
+          exit $LASTEXITCODE
+      - name: Core and UI regression
+        shell: pwsh
+        run: |
+          ctest --test-dir build --output-on-failure
+          exit $LASTEXITCODE
+      - name: Build deployable packages
+        shell: pwsh
+        run: |
+          $qtBase=Split-Path (Split-Path $env:QT_ROOT_DIR -Parent) -Parent
+          $env:Path="$(Join-Path $qtBase 'Tools/mingw1310_64/bin');$env:Path"
+          ./scripts/package.ps1 -QtRoot $env:QT_ROOT_DIR -BuildDir build -DistDir dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ImageSifter-windows-x64
+          path: |
+            dist/*-portable.zip
+            dist/*-setup.exe
+            dist/SHA256SUMS.txt

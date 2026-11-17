@@ -1,0 +1,11 @@
+# Architecture
+
+`Catalog` owns one SQLite connection on its creating thread. The foreground owner holds the engineering directory's QLockFile; background file work opens a separate connection only while the UI has disabled mutations. Sources reference originals. The catalog stores stable photo IDs and pair keys, independent of a widget or current file location. Initial pairs are directory/basename based; transport preserves those keys.
+
+File operations persist intent and content digest before transport. Windows same-volume transport uses non-overwriting MoveFileEx. Copy fallback verifies both copies before removing the source. Completion updates file location and journal in a transaction. Incomplete intents are reconciled conservatively on open: one verified target with missing source can complete; source alone can cancel; ambiguous cases retain files and request review. Group members have individual results, so a device or filesystem failure can leave a partly completed batch; both outcomes remain visible. Format organization updates the restore destination, while discarding retains it.
+
+`PhotoModel` exposes catalog records and lazy thumbnails. Four concurrent thumbnail decoders are allowed; invalidated generations cannot update a new project. In-memory previews use a96MiB cache; disposable disk previews are periodically pruned around512MiB. `PhotoFilter` handles category, name, star, label and format filters. Filesystem metadata and natural collator are reused during sorting.
+
+`Viewer` retains only the newest pending request behind one running decode. Worker results are QImages, converted to QPixmap on the GUI thread. Scene transformations implement zoom/rotation without generating a new enlarged bitmap on every wheel event. The viewer owns its movie and fades; clearing, hiding and destroying the viewer pause/release playback appropriately. LibRaw is heap allocated and bounded. Its embedded preview/half-size fallback serves culling, not full development.
+
+`Window` presents folder navigation, grid, loupe, comparison and filmstrip. It persists device geometry/recent projects separately from catalog records. Keyboard handling excludes text inputs and modal dialogs. Narrow windows collapse side panels; the native OS title bar supplies standard window behavior.

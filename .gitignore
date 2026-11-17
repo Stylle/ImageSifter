@@ -1,0 +1,15 @@
+/build*/
+/dist/
+/release/
+*.user
+*.pro.user*
+*.sqlite*
+*.imagesifter
+/previews/
+/Rejected/
+/backups/
+*.log
+aqtinstall.log
+/.qt/
+.DS_Store
+Thumbs.db
